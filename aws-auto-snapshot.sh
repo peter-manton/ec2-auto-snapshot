@@ -3,7 +3,10 @@
 # EC2 Snapshot Utility 1.0
 # Author: Peter Manton
 # Performs snaphots of all of your EC2 instances volumes.
-# TODO: Add rentention option (currently defaults to 7 days.)
+
+# TO DO:
+# - Add rentention option (currently defaults to 7 days.)
+# = Add list of excluded instances.
 
 # Define AWS CLI variables
 export AWS_ACCESS_KEY_ID=
@@ -33,7 +36,7 @@ while read -r instance; do
     while read -r volume; do
 		InstanceName=`aws ec2 describe-tags --filters Name=resource-id,Values=$instance Name=key,Values=Name --query Tags[].Value --output text`
 		# Delete existing snapshots for the present day (if present)
-		existingSnapshots=`aws ec2 describe-snapshots --filters Name=volume-id,Values=$volume Name=description,Values=*$currentDay* | grep SnapshotId  | awk '{ print $2 }' | sed 's/"//g; s/,//g' | xargs -n1 | sort -u | xargs -n 1`
+		existingSnapshots=`aws ec2 describe-snapshots --filters Name=volume-id,Values=$volume Name=description,Values=*${daysofweek[$currentDay]}* | grep SnapshotId  | awk '{ print $2 }' | sed 's/"//g; s/,//g' | xargs -n1 | sort -u | xargs -n 1`
 		if [ ! -z "$existingSnapshots" ]
 		then
 			while read -r snapshot; do
@@ -58,3 +61,7 @@ while read -r instance; do
 done <<< "$Instances"
 
 printf "Completed. Run time: $SECONDS.\n"
+
+printf '%s\n' "${failedSnapshotCreations[@]}"
+echo ""
+printf '%s\n' "${failedSnapshotRemovals[@]}"
